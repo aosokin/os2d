@@ -1,0 +1,43 @@
+output:
+  path: "" # Substitute ""
+  save_iter: 0
+  best_model:
+    do_get_best_model: True
+    dataset: "" # use the first validation dataset
+    metric: "mAP@0.50"
+    mode: "max"
+is_cuda: True
+random_seed: 0
+init:
+  model: "" # Substitute "models/resnet50-19c8e357.pth"
+model:
+  backbone_arch: "" # Substitute "ResNet50" or "ResNet101"
+  use_inverse_geom_model: False # Substitute v1: False v2 : True
+  use_simplified_affine_model: True # Substitute v1: True v2 : False
+train:
+  dataset_name: "grozi-train"
+  dataset_scale: 1280.0
+  objective:
+    class_objective: "RLL"
+    loc_weight: 0.0 # Substitute v1: 0.2, v2: 0.0
+    positive_iou_threshold: 0.5
+    negative_iou_threshold: 0.1
+    remap_classification_targets: True
+    remap_classification_targets_iou_pos: 0.8
+    remap_classification_targets_iou_neg: 0.4
+  optim:
+    anneal_lr:
+      type: "MultiStepLR"
+      milestones: [100000, 150000]
+      gamma: 0.1
+
+  model:
+    freeze_bn: True
+    freeze_bn_transform: True # Substitute v1: False, v2: True
+    train_transform_on_negs: False
+eval:
+  iter: 1000
+  dataset_names: ("grozi-val-new-cl",)
+  dataset_scales: (1280.0,)
+  mAP_iou_thresholds: (0.5,)
+  

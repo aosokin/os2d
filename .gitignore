@@ -1,0 +1,10 @@
+__pycache__/
+*.pyc
+*.pth
+*.log
+output/
+data/grozi
+data/dairy
+data/paste
+data/instre
+baselines/CoAE/data

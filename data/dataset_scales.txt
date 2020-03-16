@@ -1,0 +1,90 @@
+2020-02-29 16:58:26,377 get_dataset_scales.dataset INFO: Preparing the GroZi-3.2k dataset: version grozi-train, eval scale None, image caching False
+2020-02-29 16:58:32,878 get_dataset_scales.dataset INFO: Read 878 GT images
+2020-02-29 16:59:15,291 get_dataset_scales.dataset INFO: Found 596 data images
+2020-02-29 16:59:15,294 get_dataset_scales.dataset INFO: Loaded dataset grozi-train with 596 images, 7781 boxes, 878 classes
+Reading images from /home/aosokin/local/projects/few-shot-detection/one-shot-detection/data/grozi/src/3264
+Found 596 images
+Found 5755 non-difficult objects
+Average size of object = 584.52 for image size = 3264
+Median = 567.83, q10 = 361.00, q90 = 824.38
+To get objects to size 240, images should be of size 1379
+2020-02-29 16:59:53,918 get_dataset_scales.dataset INFO: Preparing the GroZi-3.2k dataset: version grozi-val-new-cl, eval scale None, image caching False
+2020-02-29 16:59:54,324 get_dataset_scales.dataset INFO: Read 185 GT images
+2020-02-29 16:59:59,733 get_dataset_scales.dataset INFO: Found 84 data images
+2020-02-29 16:59:59,735 get_dataset_scales.dataset INFO: Loaded dataset grozi-val-new-cl with 84 images, 622 boxes, 185 classes
+Reading images from /home/aosokin/local/projects/few-shot-detection/one-shot-detection/data/grozi/src/3264
+Found 84 images
+Found 468 non-difficult objects
+Average size of object = 594.92 for image size = 3264
+Median = 572.33, q10 = 369.64, q90 = 855.86
+To get objects to size 240, images should be of size 1368
+2020-02-29 17:00:05,269 get_dataset_scales.dataset INFO: Preparing the dairy dataset: eval scale None, image caching False
+2020-02-29 17:00:05,817 get_dataset_scales.dataset INFO: Read 166 GT images
+2020-02-29 17:00:10,415 get_dataset_scales.dataset INFO: Found 12 data images
+2020-02-29 17:00:10,415 get_dataset_scales.dataset INFO: Loaded dataset dairy with 12 images, 786 boxes, 166 classes
+Reading images from /home/aosokin/local/projects/few-shot-detection/one-shot-detection/data/dairy/src/original
+Found 12 images
+Found 690 non-difficult objects
+Average size of object = 219.03 for image size = 3000
+Median = 208.53, q10 = 150.24, q90 = 304.06
+To get objects to size 240, images should be of size 3452
+2020-02-29 17:00:14,876 get_dataset_scales.dataset INFO: Preparing the paste-v dataset: eval scale None, image caching False
+2020-02-29 17:00:17,453 get_dataset_scales.dataset INFO: Read 259 GT images
+2020-02-29 17:00:19,170 get_dataset_scales.dataset INFO: Found 91 data images
+2020-02-29 17:00:19,171 get_dataset_scales.dataset INFO: Loaded dataset paste-v with 91 images, 4861 boxes, 259 classes
+Reading images from /home/aosokin/local/projects/few-shot-detection/one-shot-detection/data/paste/src/original
+Found 91 images
+Found 3478 non-difficult objects
+Average size of object = 98.51 for image size = 1280
+Median = 90.84, q10 = 71.26, q90 = 133.16
+To get objects to size 240, images should be of size 3381
+2020-02-29 17:00:20,864 get_dataset_scales.dataset INFO: Preparing the paste-f dataset: eval scale None, image caching False
+2020-02-29 17:00:21,783 get_dataset_scales.dataset INFO: Read 259 GT images
+2020-02-29 17:00:22,895 get_dataset_scales.dataset INFO: Found 91 data images
+2020-02-29 17:00:22,896 get_dataset_scales.dataset INFO: Loaded dataset paste-f with 91 images, 4861 boxes, 259 classes
+Reading images from /home/aosokin/local/projects/few-shot-detection/one-shot-detection/data/paste/src/original
+Found 91 images
+Found 4861 non-difficult objects
+Average size of object = 100.07 for image size = 1280
+Median = 92.01, q10 = 70.79, q90 = 141.32
+To get objects to size 240, images should be of size 3338
+2020-02-29 17:00:24,578 get_dataset_scales.dataset INFO: Preparing the INSTRE dataset: version instre-s1-train, eval scale None, image caching False
+2020-02-29 17:00:31,133 get_dataset_scales.dataset INFO: Read 375 GT images
+2020-02-29 17:01:56,065 get_dataset_scales.dataset INFO: Found 11775 data images
+2020-02-29 17:01:56,070 get_dataset_scales.dataset INFO: Loaded dataset instre-s1-train with 11775 images, 77940 boxes, 375 classes
+Reading images from /home/aosokin/local/projects/few-shot-detection/one-shot-detection/data/INSTRE
+Found 11775 images
+Found 77940 non-difficult objects
+Average size of object = 355.31 for image size = 1000
+Median = 331.97, q10 = 216.63, q90 = 526.10
+To get objects to size 240, images should be of size 722
+2020-02-29 17:03:22,934 get_dataset_scales.dataset INFO: Preparing the INSTRE dataset: version instre-s1-val, eval scale None, image caching False
+2020-02-29 17:03:23,725 get_dataset_scales.dataset INFO: Read 25 GT images
+2020-02-29 17:03:30,156 get_dataset_scales.dataset INFO: Found 841 data images
+2020-02-29 17:03:30,157 get_dataset_scales.dataset INFO: Loaded dataset instre-s1-val with 841 images, 5300 boxes, 25 classes
+Reading images from /home/aosokin/local/projects/few-shot-detection/one-shot-detection/data/INSTRE
+Found 841 images
+Found 5300 non-difficult objects
+Average size of object = 368.26 for image size = 1000
+Median = 352.95, q10 = 257.50, q90 = 501.35
+To get objects to size 240, images should be of size 679
+2020-02-29 17:03:36,816 get_dataset_scales.dataset INFO: Preparing the INSTRE dataset: version instre-s2-train, eval scale None, image caching False
+2020-02-29 17:03:42,076 get_dataset_scales.dataset INFO: Read 375 GT images
+2020-02-29 17:05:43,243 get_dataset_scales.dataset INFO: Found 8686 data images
+2020-02-29 17:05:43,246 get_dataset_scales.dataset INFO: Loaded dataset instre-s2-train with 8686 images, 49090 boxes, 375 classes
+Reading images from /home/aosokin/local/projects/few-shot-detection/one-shot-detection/data/INSTRE
+Found 8686 images
+Found 49090 non-difficult objects
+Average size of object = 425.92 for image size = 1000
+Median = 396.26, q10 = 185.64, q90 = 702.81
+To get objects to size 240, images should be of size 605
+2020-02-29 17:07:46,628 get_dataset_scales.dataset INFO: Preparing the INSTRE dataset: version instre-s2-val, eval scale None, image caching False
+2020-02-29 17:07:47,253 get_dataset_scales.dataset INFO: Read 25 GT images
+2020-02-29 17:07:51,880 get_dataset_scales.dataset INFO: Found 560 data images
+2020-02-29 17:07:51,880 get_dataset_scales.dataset INFO: Loaded dataset instre-s2-val with 560 images, 2800 boxes, 25 classes
+Reading images from /home/aosokin/local/projects/few-shot-detection/one-shot-detection/data/INSTRE
+Found 560 images
+Found 2800 non-difficult objects
+Average size of object = 392.56 for image size = 1000
+Median = 385.96, q10 = 191.70, q90 = 613.32
+To get objects to size 240, images should be of size 621
