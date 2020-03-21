@@ -50,7 +50,7 @@ def main():
     logger = setup_logger("get_dataset_scales", None)
 
     for name in DATASET_LIST:
-        dataset = build_dataset_by_name(data_path, name, logger_prefix="get_dataset_scales")
+        dataset = build_dataset_by_name(data_path, name, eval_scale=None, logger_prefix="get_dataset_scales")
 
         image_sizes_by_id = get_image_sizes(dataset)
         average_size, median, q10, q90 = compute_average_object_size(dataset.gtboxframe, image_sizes_by_id)

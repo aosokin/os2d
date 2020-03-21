@@ -93,7 +93,7 @@ def make_data_loader(root_path, cfg, is_train=True, is_distributed=False, start_
 
 
 def build_detection_dataset_by_name(data_path, name, transforms, class_ids=None, cache_images=False, ignore_labels=False):
-    dataset_os2d = build_dataset_by_name(data_path, name, cache_images=cache_images, no_image_reading=False)
+    dataset_os2d = build_dataset_by_name(data_path, name, eval_scale=None, cache_images=cache_images, no_image_reading=False)
 
     dataset = DatasetDetection(dataset_os2d, transforms, class_ids=class_ids, ignore_labels=ignore_labels)
     return dataset
