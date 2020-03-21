@@ -83,12 +83,12 @@ def main():
 
     # load the dataset
     data_path = get_data_path()
-    dataloader_train, datasets_train_for_eval = build_train_dataloader_from_config(cfg, data_path,
-                                                                                  box_coder, img_normalization)
+    dataloader_train, datasets_train_for_eval = build_train_dataloader_from_config(cfg, box_coder, img_normalization,
+                                                                                   data_path=data_path)
 
-    dataloaders_eval = build_eval_dataloaders_from_cfg(cfg, data_path,
-                                                       box_coder, img_normalization,
-                                                       train_datasets_for_eval=datasets_train_for_eval)
+    dataloaders_eval = build_eval_dataloaders_from_cfg(cfg, box_coder, img_normalization,
+                                                       datasets_for_eval=datasets_train_for_eval,
+                                                       data_path=data_path)
 
     # start training (validation is inside)
     trainval_loop(dataloader_train, net, cfg, criterion, optimizer, dataloaders_eval=dataloaders_eval)

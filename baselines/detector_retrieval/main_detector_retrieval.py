@@ -102,8 +102,8 @@ def main():
     data_path = get_data_path()
     img_normalization = {"mean":cfg.model.normalization_mean, "std": cfg.model.normalization_std} # do not actually use this - will use normalization encoded in the config of maskrcnn-benchmark
     box_coder = None
-    dataloaders_eval = build_eval_dataloaders_from_cfg(cfg, data_path,
-                                                       box_coder, img_normalization,
+    dataloaders_eval = build_eval_dataloaders_from_cfg(cfg, box_coder, img_normalization,
+                                                       data_path=data_path,
                                                        logger_prefix=logger_prefix)
 
     # start evaluation

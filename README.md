@@ -55,7 +55,8 @@ wget ftp://ftp.irisa.fr/local/texmex/corpus/instre/gnd_instre.mat -P data/instre
 wget ftp://ftp.irisa.fr/local/texmex/corpus/instre/instre.tar.gz -P data/instre  # 2.3GB
 tar -xzf data/instre/instre.tar.gz -C data/instre
 ```
-4. If you want to add your own dataset you should create an instance of the `DatasetOneShotDetection` class, see [os2d/data/dataset.py](os2d/data/dataset.py) for docs and examples.
+4. If you want to add your own dataset you should create an instance of the `DatasetOneShotDetection` class and then pass it into the functions creating dataloaders `build_train_dataloader_from_config` or `build_eval_dataloaders_from_cfg` from [os2d/data/dataloader.py](os2d/data/dataloader.py). See [os2d/data/dataset.py](os2d/data/dataset.py) for docs and examples.
+
 
 ## Trained models
 We release three pretrained models:

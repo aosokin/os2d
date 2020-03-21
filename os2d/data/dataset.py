@@ -43,10 +43,10 @@ def read_annotation_file(path):
     return dataframe
 
 
-def build_eval_dataset(data_path, name, eval_scale=None, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
+def build_eval_dataset(data_path, name, eval_scale, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
     logger = logging.getLogger(f"{logger_prefix}.dataset")
     logger.info("Preparing the {0} dataset: eval scale {1}, image caching {2}".format(name, eval_scale, cache_images))
-    
+
     if name.lower() == "dairy":
         annotation_folder="classes"
         image_size = 3000
@@ -71,7 +71,7 @@ def build_eval_dataset(data_path, name, eval_scale=None, cache_images=False, no_
     return dataset
 
 
-def build_grozi_dataset(data_path, name, eval_scale=None, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
+def build_grozi_dataset(data_path, name, eval_scale, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
     logger = logging.getLogger(f"{logger_prefix}.dataset")
     logger.info("Preparing the GroZi-3.2k dataset: version {0}, eval scale {1}, image caching {2}".format(name, eval_scale, cache_images))
 
@@ -121,7 +121,7 @@ def build_grozi_dataset(data_path, name, eval_scale=None, cache_images=False, no
     return dataset
 
 
-def build_instre_dataset(data_path, name, eval_scale=None, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
+def build_instre_dataset(data_path, name, eval_scale, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
     logger = logging.getLogger(f"{logger_prefix}.dataset")
     logger.info("Preparing the INSTRE dataset: version {0}, eval scale {1}, image caching {2}".format(name, eval_scale, cache_images))
     # INSTRE dataset was downloaded from here: ftp://ftp.irisa.fr/local/texmex/corpus/instre/instre.tar.gz
@@ -284,7 +284,7 @@ def build_instre_dataset(data_path, name, eval_scale=None, cache_images=False, n
     return dataset
 
 
-def build_dataset_by_name(data_path, name, eval_scale=None, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
+def build_dataset_by_name(data_path, name, eval_scale, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
     if name.lower().startswith("grozi"):
         return build_grozi_dataset(data_path, name, eval_scale, cache_images=cache_images, no_image_reading=no_image_reading, logger_prefix=logger_prefix)
     elif name.lower().startswith("instre"):
@@ -304,7 +304,7 @@ class DatasetOneShotDetection(data.Dataset):
         self.image_size = image_size
         self.eval_scale = eval_scale
         self.cache_images = cache_images
-        
+
         self.gtboxframe = gtboxframe
         required_columns = {"imageid", "imagefilename", "classid", "classfilename", "gtbboxid", "difficult", "lx", "ty", "rx", "by"}
         assert required_columns.issubset(self.gtboxframe.columns), "Missing columns in gtboxframe: {}".format(required_columns - set(self.gtboxframe.columns))
@@ -331,7 +331,7 @@ class DatasetOneShotDetection(data.Dataset):
         self.num_images = len(self.image_ids)
         self.num_boxes = len(self.gtboxframe)
         self.num_classes = len(self.gtboxframe["classfilename"].unique())
-        
+
         self.logger.info("Loaded dataset {0} with {1} images, {2} boxes, {3} classes".format(
             self.name, self.num_images, self.num_boxes, self.num_classes
         ))
@@ -354,7 +354,7 @@ class DatasetOneShotDetection(data.Dataset):
 
     def get_image_size_for_image_id(self, image_id):
         return self.image_size_per_image_id[image_id]
-    
+
     def _read_dataset_images(self):
         # create caches
         self.image_path_per_image_id = OrderedDict()

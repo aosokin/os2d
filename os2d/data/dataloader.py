@@ -23,37 +23,46 @@ from .dataset import build_dataset_by_name
 from os2d.utils import get_image_size_after_resize_preserving_aspect_ratio
 
 
-def build_eval_dataloaders_from_cfg(cfg, data_path, box_coder, img_normalization, train_datasets_for_eval=[], logger_prefix="OS2D.eval"):
+def build_eval_dataloaders_from_cfg(cfg, box_coder, img_normalization,
+                                    datasets_for_eval=[], data_path="",
+                                    logger_prefix="OS2D.eval"):
     """Construct dataloaders to use for evaluation.
     Args:
         cfg - config object, evaluation is done on cfg.eval.dataset_names evaluation datasets
-        data_path (str) - root path to search for datasets
         box_coder (Os2dBoxCoder)
         img_normalization (dict) - normalization to use, keys "mean" and "std" have lists of 3 floats each
-        train_datasets_for_eval (list of DatasetOneShotDetection) - extra datasets for eval, usually subsets of the training set
+        datasets_for_eval (list of DatasetOneShotDetection) - datasets for eval, should include subsets of the training set and created datasets
+        data_path (str) - root path to search for datasets, if provided will create the eval datasets from config
         logger_prefix (str) - prefix to ass to the logger outputs
     Output:
         dataloaders_eval (list of DataloaderOneShotDetection) - the dataloaders
     """
-    # check that the eval_scales are provided properly
-    if len(cfg.eval.dataset_scales) == 1:
-        eval_scales = cfg.eval.dataset_scales * len(cfg.eval.dataset_names)
-        eval_dataset_names = cfg.eval.dataset_names
-    elif len(cfg.eval.dataset_names) == 1:
-        eval_dataset_names = cfg.eval.dataset_names * len(cfg.eval.dataset_scales)
-        eval_scales = cfg.eval.dataset_scales
+    if data_path:
+        # check that the eval_scales are provided properly
+        if len(cfg.eval.dataset_scales) == 1:
+            eval_scales = cfg.eval.dataset_scales * len(cfg.eval.dataset_names)
+            eval_dataset_names = cfg.eval.dataset_names
+        elif len(cfg.eval.dataset_names) == 1:
+            eval_dataset_names = cfg.eval.dataset_names * len(cfg.eval.dataset_scales)
+            eval_scales = cfg.eval.dataset_scales
+        else:
+            eval_scales = cfg.eval.dataset_scales
+            eval_dataset_names = cfg.eval.dataset_names
+        assert len(eval_scales) == len(eval_dataset_names), "The number of values in eval_scales (have {0}: {1}) should be compatible with the number of values in eval_datasets_name (have {2}: {3})".format(len(eval_scales), eval_scales, len(eval_dataset_names), eval_dataset_names)
+        
+        # build all the eval datasets
+        datasets_val = [build_dataset_by_name(data_path, dataset_name,
+                                              eval_scale=eval_scale,
+                                              cache_images=cfg.eval.cache_images,
+                                              logger_prefix=logger_prefix)\
+                        for dataset_name, eval_scale in zip(eval_dataset_names, eval_scales) if dataset_name]
     else:
-        eval_scales = cfg.eval.dataset_scales
-        eval_dataset_names = cfg.eval.dataset_names
-    assert len(eval_scales) == len(eval_dataset_names), "The number of values in eval_scales (have {0}: {1}) should be compatible with the number of values in eval_datasets_name (have {2}: {3})".format(len(eval_scales), eval_scales, len(eval_dataset_names), eval_dataset_names)
-    
-    # build all the eval datasets
-    datasets_val = [build_dataset_by_name(data_path, dataset_name, eval_scale, cache_images=cfg.eval.cache_images, logger_prefix=logger_prefix) for dataset_name, eval_scale in zip(eval_dataset_names, eval_scales) if dataset_name]
-    
+        datasets_val = []
+
     # add extra train dataset if provided
-    if len(train_datasets_for_eval) != 0:
-        datasets_val = datasets_val + train_datasets_for_eval
-        eval_scales = eval_scales + [cfg.train.dataset_scale] * len(train_datasets_for_eval)
+    if len(datasets_for_eval) != 0:
+        datasets_val = datasets_val + datasets_for_eval
+        eval_scales = eval_scales + [d.eval_scale for d in datasets_for_eval]
 
     dataloaders_eval = []
     for dataset, eval_scale in zip(datasets_val, eval_scales):
@@ -75,25 +84,33 @@ def build_eval_dataloaders_from_cfg(cfg, data_path, box_coder, img_normalization
     return dataloaders_eval
 
 
-def build_train_dataloader_from_config(cfg, data_path, box_coder, img_normalization, logger_prefix="OS2D.train"):
+def build_train_dataloader_from_config(cfg, box_coder, img_normalization,
+                                       dataset_train=None, data_path="",
+                                       logger_prefix="OS2D.train"):
     """Construct dataloaders to use for training.
     Args:
         cfg - config object, training is done on cfg.train.dataset_name dataset
-        data_path (str) - root path to search for datasets
         box_coder (Os2dBoxCoder)
         img_normalization (dict) - normalization to use, keys "mean" and "std" have lists of 3 floats each
+        dataset_train (DatasetOneShotDetection) - one needs either to provide a dataset object or a path to create such object from config
+        data_path (str) - root path to search for datasets
         logger_prefix (str) - prefix to ass to the logger outputs
     Output:
         dataloader_train (DataloaderOneShotDetection) - the dataloader for training
         datasets_train_subset_for_eval (list of DatasetOneShotDetection) - subsets of the training set to pass to evaluation dataloaders
     """
-    dataset_train = build_dataset_by_name(data_path, cfg.train.dataset_name, cfg.train.dataset_scale, cache_images=cfg.train.cache_images,
-                                          no_image_reading=not cfg.train.do_training) 
+    if dataset_train is None:
+        assert data_path, "If explicit dataset_train is not provided one needs to provide a data_path to create one"
+        dataset_train = build_dataset_by_name(data_path, cfg.train.dataset_name,
+                                              eval_scale=cfg.train.dataset_scale,
+                                              cache_images=cfg.train.cache_images,
+                                              no_image_reading=not cfg.train.do_training)
+
     logger = logging.getLogger(logger_prefix+".dataloader")
     # create training dataloader
     random_crop_size = FeatureMapSize(w=cfg.train.augment.train_patch_width,
-                                    h=cfg.train.augment.train_patch_height)
-    evaluation_scale = cfg.train.dataset_scale / dataset_train.image_size
+                                      h=cfg.train.augment.train_patch_height)
+    evaluation_scale = dataset_train.eval_scale / dataset_train.image_size
 
     pyramid_scales_eval = cfg.eval.scales_of_image_pyramid
     pyramid_scales_eval = [p * evaluation_scale for p in pyramid_scales_eval]
@@ -108,7 +125,6 @@ def build_train_dataloader_from_config(cfg, data_path, box_coder, img_normalizat
                                       random_crop_scale=evaluation_scale,
                                       jitter_aspect_ratio=cfg.train.augment.jitter_aspect_ratio,
                                       scale_jitter=cfg.train.augment.scale_jitter,
-                                      # random_crop_scale=(opt.scale_jitter * evaluation_scale,  min(evaluation_scale / opt.scale_jitter, 1.0)),
                                       min_box_coverage=cfg.train.augment.min_box_coverage,
                                       random_color_distortion=cfg.train.augment.random_color_distortion,
                                       random_crop_class_images=cfg.train.augment.random_crop_class_images,
