@@ -57,14 +57,17 @@ tar -xzf data/instre/instre.tar.gz -C data/instre
 ```
 4. If you want to add your own dataset you should create an instance of the `DatasetOneShotDetection` class and then pass it into the functions creating dataloaders `build_train_dataloader_from_config` or `build_eval_dataloaders_from_cfg` from [os2d/data/dataloader.py](os2d/data/dataloader.py). See [os2d/data/dataset.py](os2d/data/dataset.py) for docs and examples.
 
-
 ## Trained models
 We release three pretrained models:
-1. OS2D V2-train: [Google Drive](https://drive.google.com/open?id=1l_aanrxHj14d_QkCpein8wFmainNAzo8)
-2. OS2D V1-train: [Google Drive](https://drive.google.com/open?id=1ByDRHMt1x5Ghvy7YTYmQjmus9bQkvJ8g)
-3. OS2D V2-init: [Google Drive](https://drive.google.com/open?id=1sr9UX45kiEcmBeKHdlX7rZTSA4Mgt0A7)
+| Name | mAP on "grozi-val-new-cl" | link |
+| -- | -- | -- |
+| OS2D V2-train | 90.65 | [Google Drive](https://drive.google.com/open?id=1l_aanrxHj14d_QkCpein8wFmainNAzo8) |
+| OS2D V1-train | 88.71 | [Google Drive](https://drive.google.com/open?id=1ByDRHMt1x5Ghvy7YTYmQjmus9bQkvJ8g) |
+| OS2D V2-init  | 86.07 | [Google Drive](https://drive.google.com/open?id=1sr9UX45kiEcmBeKHdlX7rZTSA4Mgt0A7) |
 
-You can download them with [the magic command](https://medium.com/@acpanjan/download-google-drive-files-using-wget-3c2c025a8b99):
+The results (mAP on "grozi-val-new-cl") can be computed with the commands given [below](#evaluation).
+
+You can download the released datasets  with [the magic commands](https://medium.com/@acpanjan/download-google-drive-files-using-wget-3c2c025a8b99):
 ```bash
 cd $OS2D_ROOT
 ./os2d/utils/wget_gdrive.sh models/os2d_v2-train.pth 1l_aanrxHj14d_QkCpein8wFmainNAzo8
