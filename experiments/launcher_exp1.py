@@ -67,8 +67,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.2,
                 "train.model.freeze_bn_transform": False,
                 "train.objective.class_objective": "ContrastiveLoss",
-                "train.objective.pos_margin": 0.0,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 1.0,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": False,
             }
             )
@@ -80,8 +80,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.2,
                 "train.model.freeze_bn_transform": False,
                 "train.objective.class_objective": "RLL",
-                "train.objective.pos_margin": 0.2,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 0.6,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": False,
             }
             )
@@ -93,8 +93,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.2,
                 "train.model.freeze_bn_transform": False,
                 "train.objective.class_objective": "RLL",
-                "train.objective.pos_margin": 0.2,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 0.6,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": True,
             }
             )
@@ -106,8 +106,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.2,
                 "train.model.freeze_bn_transform": False,
                 "train.objective.class_objective": "RLL",
-                "train.objective.pos_margin": 0.2,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 0.6,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": True,
                 "train.mining.do_mining": True,
             }
@@ -120,8 +120,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.2,
                 "train.model.freeze_bn_transform": False,
                 "train.objective.class_objective": "RLL",
-                "train.objective.pos_margin": 0.2,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 0.6,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": True,
             }
             )
@@ -133,8 +133,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.2,
                 "train.model.freeze_bn_transform": False,
                 "train.objective.class_objective": "RLL",
-                "train.objective.pos_margin": 0.2,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 0.6,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": True,
                 "train.mining.do_mining": True,
             }
@@ -147,8 +147,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.2,
                 "train.model.freeze_bn_transform": True,
                 "train.objective.class_objective": "RLL",
-                "train.objective.pos_margin": 0.2,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 0.6,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": True,
                 "init.transform": "models/weakalign_resnet101_affine_tps.pth.tar",
             }
@@ -161,8 +161,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.0,
                 "train.model.freeze_bn_transform": True,
                 "train.objective.class_objective": "RLL",
-                "train.objective.pos_margin": 0.2,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 0.6,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": True,
                 "init.transform": "models/weakalign_resnet101_affine_tps.pth.tar",
             }
@@ -175,8 +175,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.0,
                 "train.model.freeze_bn_transform": True,
                 "train.objective.class_objective": "RLL",
-                "train.objective.pos_margin": 0.2,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 0.6,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": True,
                 "train.mining.do_mining": True,
                 "init.transform": "models/weakalign_resnet101_affine_tps.pth.tar",
@@ -190,8 +190,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.0,
                 "train.model.freeze_bn_transform": True,
                 "train.objective.class_objective": "ContrastiveLoss",
-                "train.objective.pos_margin": 0.0,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 1.0,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": False,
                 "init.transform": "models/weakalign_resnet101_affine_tps.pth.tar",
             }
@@ -204,8 +204,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.0,
                 "train.model.freeze_bn_transform": True,
                 "train.objective.class_objective": "ContrastiveLoss",
-                "train.objective.pos_margin": 0.0,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 1.0,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": True,
                 "init.transform": "models/weakalign_resnet101_affine_tps.pth.tar",
             }
@@ -219,8 +219,8 @@ if __name__ == "__main__":
                 "train.objective.loc_weight": 0.0,
                 "train.model.freeze_bn_transform": True,
                 "train.objective.class_objective": "RLL",
-                "train.objective.pos_margin": 0.2,
-                "train.objective.neg_margin": 0.25,
+                "train.objective.pos_margin": 0.6,
+                "train.objective.neg_margin": 0.5,
                 "train.objective.remap_classification_targets": False,
                 "init.transform": "models/weakalign_resnet101_affine_tps.pth.tar",
             }

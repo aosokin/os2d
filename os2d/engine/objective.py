@@ -186,8 +186,13 @@ class Os2dObjective(nn.Module):
         # negative labels indicate scores that should be ignored (intermidiate IoU intersection)
         cls_loss_name = "cls_" + self.class_loss
         if self.class_loss == "ContrastiveLoss":
-            loss_neg = (self.margin + cls_preds).clamp(min=0.0)
-            loss_pos = (-cls_preds - self.margin_pos).clamp(min=0.0)
+            # add margins and truncate
+            loss_neg = (cls_preds - self.margin).clamp(min=0.0)
+            loss_pos = (self.margin_pos - cls_preds).clamp(min=0.0)
+
+            # 0.5 is there for backward compatability (no logical reasons)
+            loss_neg = 0.5 * loss_neg
+            loss_pos = 0.5 * loss_pos
 
             loss_neg = masked_select_or_fill_constant(loss_neg, neg) # use torch.where instead of * mask.float() to avoid division by zero
             loss_pos = masked_select_or_fill_constant(loss_pos, pos)
@@ -197,8 +202,14 @@ class Os2dObjective(nn.Module):
 
             cls_loss = loss_neg + loss_pos
         elif self.class_loss == "RLL":
-            loss_neg = (self.margin + cls_preds).clamp(min=0.0)
-            loss_pos = (-cls_preds - self.margin_pos).clamp(min=0.0)
+            # add margins and truncate
+            loss_neg = (cls_preds - self.margin).clamp(min=0.0)
+            loss_pos = (self.margin_pos - cls_preds).clamp(min=0.0)
+
+            # 0.5 is there for backward compatability (no logical reasons)
+            loss_neg = 0.5 * loss_neg
+            loss_pos = 0.5 * loss_pos
+
             loss_neg = masked_select_or_fill_constant(loss_neg, neg) # use torch.where instead of * mask.float() to avoid division by zero
             loss_pos = masked_select_or_fill_constant(loss_pos, pos)
 

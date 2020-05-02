@@ -317,9 +317,13 @@ class Os2dHead(nn.Module):
         Returns:
                 # here b^C is the class batch size, i.e., the number of class images contained in self.class_batch_size passed when creating this object
             output_localization (Tensor[float], size b^A x b^C x 4 x h^A x w^A) - the localization output w.r.t. the standard box encoding - computed by DetectionBoxCoder.build_loc_targets
-            output_recognition (Tensor[float], size size b^A x b^C x 1 x h^A x w^A) - the recognition output for each of the classes - the correlation, linearly converted to [0, 1] segment, the higher the better match to the class
-            output_recognition_transform_detached (Tensor[float], size b^A x b^C x 1 x h^A x w^A) - same to output_recognition, but with the computational graph detached from the transformation (for backward  that does not update the transofrmation - intended for the negatives)
-            corner_coordinates (Tensor[float], size size b^A x b^C x 8 x h^A x w^A) - the corners of the default boxes after the transofrmation, datached from the computational graph, for visualisation only
+            output_recognition (Tensor[float], size size b^A x b^C x 1 x h^A x w^A) - the recognition output for each of the classes:
+                in the [-1, 1] segment, the higher the better match to the class
+            output_recognition_transform_detached (Tensor[float], size b^A x b^C x 1 x h^A x w^A) - same as output_recognition,
+                but with the computational graph detached from the transformation (for backward  that does not update
+                the transofrmation - intended for the negatives)
+            corner_coordinates (Tensor[float], size size b^A x b^C x 8 x h^A x w^A) - the corners of the default boxes after
+                the transofrmation, datached from the computational graph, for visualisation only
         """
         # get dims
         batch_size = feature_maps.size(0)
@@ -381,21 +385,21 @@ class Os2dHead(nn.Module):
 
         # extract and pool matches
         # # slower code:
-        # matches_summed = self.resample_of_correlation_map_simple(cor_maps_for_recognition,
+        # output_recognition = self.resample_of_correlation_map_simple(cor_maps_for_recognition,
         #                                                          resampling_grids_fm_coord_unit,
         #                                                          self.class_pool_mask)
 
         # we use faster, but somewhat more obscure version
-        matches_summed = self.resample_of_correlation_map_fast(cor_maps_for_recognition,
+        output_recognition = self.resample_of_correlation_map_fast(cor_maps_for_recognition,
                                                              resampling_grids_fm_coord_unit,
                                                              self.class_pool_mask)
-        if matches_summed.requires_grad:
-            matches_summed_transform_detached = self.resample_of_correlation_map_fast(cor_maps_for_recognition,
+        if output_recognition.requires_grad:
+            output_recognition_transform_detached = self.resample_of_correlation_map_fast(cor_maps_for_recognition,
                                                                                       resampling_grids_fm_coord_unit.detach(),
                                                                                       self.class_pool_mask)
         else:
             # Optimization to make eval faster
-            matches_summed_transform_detached = matches_summed
+            output_recognition_transform_detached = output_recognition
 
         # build localization targets
         default_boxes_xyxy_wrt_image = self.box_grid_generator_image_level.create_strided_boxes_columnfirst(fm_size=image_fm_size)
@@ -420,8 +424,6 @@ class Os2dHead(nn.Module):
         corner_coordinates = corner_coordinates.view(batch_size, self.class_batch_size, image_fm_size.h, image_fm_size.w, 8) # batch_size x label_batch_size x fm_height x fm_width x 8
         corner_coordinates = corner_coordinates.transpose(3, 4).transpose(2, 3)  # batch_size x label_batch_size x 5 x fm_height x fm_width
 
-
-
         class_boxes = BoxList(class_boxes_xyxy.view(-1, 4), image_fm_size, mode="xyxy")
         default_boxes_wrt_image = BoxList(default_boxes_xyxy_wrt_image.view(-1, 4), image_fm_size, mode="xyxy")
         default_boxes_with_image_batches = cat_boxlist([default_boxes_wrt_image] * batch_size * self.class_batch_size)
@@ -430,8 +432,6 @@ class Os2dHead(nn.Module):
         output_localization = output_localization.view(batch_size, self.class_batch_size, image_fm_size.h, image_fm_size.w, 4)  # batch_size x label_batch_size x fm_height x fm_width x 4
         output_localization = output_localization.transpose(3, 4).transpose(2, 3)  # batch_size x label_batch_size x 4 x fm_height x fm_width
 
-        output_recognition = (matches_summed - 1.0) / 2.0
-        output_recognition_transform_detached = (matches_summed_transform_detached - 1.0) / 2.0
         return output_localization, output_recognition, output_recognition_transform_detached, corner_coordinates
 
 

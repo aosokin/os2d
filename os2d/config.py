@@ -62,10 +62,10 @@ cfg.train.objective = CN()
 # "HingeEmbedding"
 # "BCE"
 cfg.train.objective.class_objective = "RLL"
-# Margin for the negatives (if the loss needs it) 
-cfg.train.objective.neg_margin = 0.25
-# Margin for the positives (if the loss needs it) 
-cfg.train.objective.pos_margin = 0.2
+# Margin for the negatives (if the loss needs it); scores normalized to [-1, 1]
+cfg.train.objective.neg_margin = 0.5
+# Margin for the positives (if the loss needs it); scores normalized to [-1, 1]
+cfg.train.objective.pos_margin = 0.6
 # Weight factor in front of the localization objective (Smooth-L1)"
 cfg.train.objective.loc_weight = 0.2
 # An anchor is positive if its IoU with any GT is >= this threshold
