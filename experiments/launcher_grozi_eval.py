@@ -126,8 +126,7 @@ if __name__ == "__main__":
                 folder_suffix="best_V1-train")
         # Best v2 trained model
         add_job(1, "v2", "ResNet50", eval_dataset,
-                #"output/exp1/exp1.8.lossRLL_remap_invFullAffine_initTranform_zeroLocLoss_mine_seed0_ResNet50_init_imageNetCaffe2",
-                "output/exp1/exp1.7.lossRLL_remap_invFullAffine_initTranform_zeroLocLoss_seed0_ResNet50_init_imageNetCaffe2",
+                "output/exp1/exp1.8.lossRLL_remap_invFullAffine_initTranform_zeroLocLoss_mine_seed0_ResNet50_init_imageNetCaffe2",
                 model_checkpoint="checkpoint_best_model_grozi-val-new-cl_mAP@0.50.pth",
                 folder_suffix="best_V2-train")
         # Best v2 init model
