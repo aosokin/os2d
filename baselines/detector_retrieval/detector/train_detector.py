@@ -57,7 +57,7 @@ def train_with_validation(cfg, local_rank, distributed, test_weights=None):
     ignore_labels = (cfg.MODEL.ROI_BOX_HEAD.NUM_CLASSES == 0)
 
     # prepare training data
-    root_path = os.path.expanduser(os.path.abspath(os.path.join("..", "..", "..", "data")))
+    root_path = os.path.expanduser(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "..", "data")))
     data_loader, class_ids = make_data_loader(
         root_path,
         cfg,

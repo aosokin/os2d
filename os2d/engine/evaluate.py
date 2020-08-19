@@ -64,7 +64,7 @@ def evaluate(dataloader, net, cfg, criterion=None, print_per_class_results=False
         num_labels = len(class_ids)
         gt_boxes_one_image = dataloader.get_image_annotation_for_imageid(image_id)
         gt_boxes.append(gt_boxes_one_image)
-        
+
         # compute losses
         if len(gt_boxes_one_image) > 0:
             # there is some annotation for this image
@@ -154,7 +154,8 @@ def evaluate(dataloader, net, cfg, criterion=None, print_per_class_results=False
         losses["mAP@{:0.2f}".format(mAP_iou_threshold)] = ap_data["map"]
         losses["mAPw@{:0.2f}".format(mAP_iou_threshold)] = ap_data["map_weighted"]
         losses["recall@{:0.2f}".format(mAP_iou_threshold)] = ap_data["recall"]
-    
+        losses["AP_joint_classes@{:0.2f}".format(mAP_iou_threshold)] = ap_data["ap_joint_classes"]
+
         if print_per_class_results:
             # per class AP information
             for i_class, (ap, recall, n_pos) in enumerate(zip(ap_data["ap_per_class"], ap_data["recall_per_class"], ap_data["n_pos"])):
@@ -250,6 +251,19 @@ def make_iterator_extract_scores_from_images_batched(dataloader, net, logger, im
                 im_flipped = im.flip(2)
                 batch_class_images.append(im_flipped)
                 num_class_views = 2
+            elif class_image_augmentation == "horflip_rotation90":
+                im90 = im.rot90(1, [1, 2])
+                im180 = im90.rot90(1, [1, 2])
+                im270 = im180.rot90(1, [1, 2])
+                im_flipped = im.flip(2)
+                im90_flipped = im90.flip(2)
+                im180_flipped = im180.flip(2)
+                im270_flipped = im270.flip(2)
+
+                for new_im in [im90, im180, im270, im_flipped, im90_flipped, im180_flipped, im270_flipped]:
+                    batch_class_images.append(new_im)
+
+                num_class_views = len(batch_class_images)
             else:
                 raise RuntimeError(f"Unknown value of class_image_augmentation: {class_image_augmentation}")
 

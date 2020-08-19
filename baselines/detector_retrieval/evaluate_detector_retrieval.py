@@ -212,6 +212,7 @@ def evaluate(dataloader, detector, cfg_maskrcnn, retrievalnet, opt, cfg_eval, cf
         losses["mAP@{:0.2f}".format(mAP_iou_threshold)] = ap_data["map"]
         losses["mAPw@{:0.2f}".format(mAP_iou_threshold)] = ap_data["map_weighted"]
         losses["recall@{:0.2f}".format(mAP_iou_threshold)] = ap_data["recall"]
+        losses["AP_joint_classes@{:0.2f}".format(mAP_iou_threshold)] = ap_data["ap_joint_classes"]
 
         # per class AP information
         for i_class, (ap, recall, n_pos) in enumerate(zip(ap_data["ap_per_class"], ap_data["recall_per_class"], ap_data["n_pos"])):

@@ -62,7 +62,7 @@ def parse_opts():
     parser.add_argument(
         "--num-random-crops-per-image",
         type=int,
-        default=10,
+        default=0,
         help="Adding this number of random crops to form a set of negatives",
     )
     parser.add_argument(
@@ -78,6 +78,12 @@ def parse_opts():
         help="IoU threshold to use sampled crops as negatives",
     )
     parser.add_argument(
+        "--num-queries-image-to-image",
+        type=int,
+        default=0,
+        help="Add pairs from each object and this number of random positives"
+    )
+    parser.add_argument(
         "--random-seed",
         type=int,
         default=42,
@@ -90,12 +96,12 @@ def parse_opts():
 def cid2filename(cid, prefix):
     """
     Creates a training image path out of its CID name
-    
+
     Arguments
     ---------
     cid      : name of the image
     prefix   : root directory where images are saved
-    
+
     Returns
     -------
     filename : full image filename
@@ -104,10 +110,93 @@ def cid2filename(cid, prefix):
     return os.path.join(prefix, cid[-2:], cid[-4:-2], cid[-6:-4], cid)
 
 
+def prepare_dataset(target_path,
+                    retrieval_dataset_train_name, dataset_train,
+                    retrieval_dataset_val_name, dataset_val,
+                    iou_pos_threshold, iou_neg_threshold,
+                    num_queries_image_to_image,
+                    logger,
+                    retrieval_dataset_test_names=None, datasets_test=None,
+                    num_random_crops_per_image=0):
+    # prepare data images for train and val
+    tgt_image_path_trainval = os.path.join(target_path, "train", retrieval_dataset_train_name, "ims")
+    mkdir(tgt_image_path_trainval)
+    logger.info(f"Train set {retrieval_dataset_train_name}")
+    db_images_train = save_cropped_boxes(dataset_train, tgt_image_path_trainval, extension="", num_random_crops_per_image=num_random_crops_per_image)
+
+    # create val subset: add all boxes from images that have at least one validation box (can add some boxes from train as distractors)
+    logger.info(f"Val set {retrieval_dataset_val_name}")
+    db_images_val = save_cropped_boxes(dataset_val, tgt_image_path_trainval, extension="", num_random_crops_per_image=num_random_crops_per_image)
+
+    # prepare data images for test
+    dbs_images_test = {}
+    if datasets_test:
+        for dataset_test, dataset_name in zip(datasets_test, retrieval_dataset_test_names):
+            tgt_image_path_test = os.path.join(target_path, "test", dataset_name, "jpg")  # the folder name should be always "test" - from cirtorch
+            mkdir(tgt_image_path_test)
+            logger.info(f"Eval dataset: {dataset_name}")
+            dbs_images_test[dataset_name] = save_cropped_boxes(dataset_test, tgt_image_path_test, num_random_crops_per_image=num_random_crops_per_image)
+
+    # save GT images from train
+    db_classes_train = save_class_images(dataset_train,
+                                         os.path.join(target_path, "train", retrieval_dataset_train_name, "ims"), extension="")
+
+    # save GT images from val
+    db_classes_val = save_class_images(dataset_val,
+                                       os.path.join(target_path, "train", retrieval_dataset_train_name, "ims"), extension="")
+
+    # save GT images for testing
+    dbs_classes_test = {}
+    if datasets_test:
+        for dataset_test, dataset_name in zip(datasets_test, retrieval_dataset_test_names):
+            dbs_classes_test[dataset_name] = save_class_images(dataset_test,
+                                                    os.path.join(target_path, "test", dataset_name, "jpg"))
+
+    # merge databases
+    logger.info(f"Processing trainval set from {retrieval_dataset_train_name} and {retrieval_dataset_val_name}")
+    db_train = create_train_database_queries(db_images_train, db_classes_train,
+                                             iou_pos_threshold=iou_pos_threshold,
+                                             iou_neg_threshold=iou_neg_threshold,
+                                             logger=logger,
+                                             num_queries_image_to_image=num_queries_image_to_image)
+    db_val = create_train_database_queries(db_images_val, db_classes_val,
+                                           iou_pos_threshold=iou_pos_threshold,
+                                           iou_neg_threshold=iou_neg_threshold,
+                                           logger=logger,
+                                           num_queries_image_to_image=num_queries_image_to_image)
+
+    dbs_test = {}
+    if datasets_test:
+        for dataset_name in retrieval_dataset_test_names:
+            logger.info(f"Processing test set {dataset_name}")
+            dbs_test[dataset_name] = create_test_database_queries(dbs_images_test[dataset_name], dbs_classes_test[dataset_name],
+                                                                  iou_pos_threshold=iou_pos_threshold,
+                                                                  iou_neg_threshold=iou_neg_threshold,
+                                                                  logger=logger,
+                                                                  num_queries_image_to_image=num_queries_image_to_image)
+
+    # save trainval to disk
+    db_trainval = {"train":db_train, "val":db_val}
+    db_fn = os.path.join(os.path.join(target_path, "train", retrieval_dataset_train_name), f"{retrieval_dataset_train_name}.pkl")
+    with open(db_fn, "wb") as f:
+        pickle.dump(db_trainval, f)
+
+    # save train separately for whitening
+    db_fn = os.path.join(os.path.join(target_path, "train", retrieval_dataset_train_name), f"{retrieval_dataset_train_name}-whiten.pkl")
+    with open(db_fn, "wb") as f:
+        pickle.dump(db_train, f)
+
+    # save test to disk
+    if datasets_test:
+        for dataset_name in retrieval_dataset_test_names:
+            db_fn = os.path.join(os.path.join(target_path, "test", dataset_name ), f"gnd_{dataset_name}.pkl")
+            with open(db_fn, "wb") as f:
+                pickle.dump(dbs_test[dataset_name], f)
+
+
 def main():
     args = parse_opts()
     set_random_seed(args.random_seed)
-    crop_suffix = f"-rndCropPerImage{args.num_random_crops_per_image}"
 
     logger_name = "retrieval_data"
     retrieval_dataset_name_suffix = "-retrieval"
@@ -128,154 +217,45 @@ def main():
                                         logger_prefix=logger_name)
     retrieval_dataset_val_name = dataset_val.get_name() + retrieval_dataset_name_suffix
 
+
+    datasets_test = []
+    retrieval_dataset_test_names = []
     if args.datasets_test:
         if len(args.datasets_test_scale) == 1:
             datasets_test_scale = args.datasets_test_scale * len(args.datasets_test)
         else:
             datasets_test_scale = args.datasets_test_scale
-        assert len(args.datasets_test) == len(datasets_test_scale), "Arg datasets-test-scale should ne of len 1 or of len equal to the len of datasets-test"
-        
-        datasets_test = []
-        retrieval_dataset_test_names = []
-        for dataset_name, scale in zip(args.datasets_test, datasets_test_scale): 
+        assert len(args.datasets_test) == len(datasets_test_scale), "Arg datasets-test-scale should be of len 1 or of len equal to the len of datasets-test"
+
+        for dataset_name, scale in zip(args.datasets_test, datasets_test_scale):
             dataset = build_dataset_by_name(data_path, dataset_name,
                                             eval_scale=scale,
                                             logger_prefix=logger_name)
             retrieval_dataset_test_names.append(dataset.get_name() + retrieval_dataset_name_suffix)
             datasets_test.append(dataset)
 
-    # prepare data images for train and val
-    tgt_image_path_trainval = os.path.join(target_path, "train", retrieval_dataset_train_name, "ims")
-    mkdir(tgt_image_path_trainval)
-    logger.info(f"Train set {retrieval_dataset_train_name} with no random crops")
-    db_images_train = save_cropped_boxes(dataset_train, tgt_image_path_trainval, extension="")
-    
-    # create val subset: add all boxes from images that have at least one validation box (can add some boxes from train as distractors)
-    logger.info(f"Val set {retrieval_dataset_val_name} with no random crops")
-    db_images_val = save_cropped_boxes(dataset_val, tgt_image_path_trainval, extension="")
-    
-    # prepare data images for trainval with crops
-    tgt_image_path_trainval_randcrops = os.path.join(target_path, "train", retrieval_dataset_train_name + crop_suffix, "ims")
-    mkdir(tgt_image_path_trainval_randcrops)
+    # create dataset
+    if args.num_random_crops_per_image > 0:
+        crop_suffix = f"-rndCropPerImage{args.num_random_crops_per_image}"
+        retrieval_dataset_train_name = retrieval_dataset_train_name + crop_suffix
+        retrieval_dataset_val_name = retrieval_dataset_val_name + crop_suffix
+        retrieval_dataset_test_names = [name + crop_suffix for name in retrieval_dataset_test_names]
 
-    logger.info(f"Train set {retrieval_dataset_train_name} with {args.num_random_crops_per_image} crops per image")
-    db_images_train_randomCrops = save_cropped_boxes(dataset_train, tgt_image_path_trainval_randcrops, extension="", num_random_crops_per_image=args.num_random_crops_per_image)
-    
-    # create val subset: add all boxes from images that have at least one validation box (can add some boxes from train as distractors)
-    logger.info(f"Val set {retrieval_dataset_val_name} with {args.num_random_crops_per_image} crops per image")
-    db_images_val_randomCrops = save_cropped_boxes(dataset_val, tgt_image_path_trainval_randcrops, extension="", num_random_crops_per_image=args.num_random_crops_per_image)
-
-    # prepare data images for test
-    dbs_images_test = {}
-    if datasets_test:
-        for dataset_test, dataset_name in zip(datasets_test, retrieval_dataset_test_names):
-            tgt_image_path_test = os.path.join(target_path, "test", dataset_name, "jpg")  # the folder name should be always "test" - from cirtorch
-            mkdir(tgt_image_path_test)
-            logger.info(f"Eval dataset: {dataset_name}")
-            dbs_images_test[dataset_name] = save_cropped_boxes(dataset_test, tgt_image_path_test)
-
-            # prepare data images for test with random crops
-            tgt_image_path_test = os.path.join(target_path, "test", dataset_name + crop_suffix,"jpg")  # the folder name should be always "test" - from cirtorch
-            mkdir(tgt_image_path_test)
-            logger.info(f"Eval dataset: {dataset_name + crop_suffix}")
-            dbs_images_test[dataset_name + crop_suffix] = save_cropped_boxes(dataset_test, tgt_image_path_test, num_random_crops_per_image=args.num_random_crops_per_image)
-
-    # save GT images from train
-    db_classes_train = save_class_images(dataset_train,
-                                         os.path.join(target_path, "train", retrieval_dataset_train_name, "ims"), extension="")
-    db_classes_train_randomCrops = save_class_images(dataset_train,
-                                                     os.path.join(target_path, "train", retrieval_dataset_train_name + crop_suffix, "ims"), extension="")
-
-    # save GT images from val
-    db_classes_val = save_class_images(dataset_val,
-                                       os.path.join(target_path, "train", retrieval_dataset_train_name, "ims"), extension="")
-    db_classes_val_randomCrops = save_class_images(dataset_val,
-                                                   os.path.join(target_path, "train", retrieval_dataset_train_name + crop_suffix, "ims"), extension="")
-
-    # save GT images for testing
-    dbs_classes_test = {}
-    if args.datasets_test:
-        for dataset_test, dataset_name in zip(datasets_test, retrieval_dataset_test_names):
-            dbs_classes_test[dataset_name] = save_class_images(dataset_test,
-                                                    os.path.join(target_path, "test", dataset_name, "jpg"))
-            dbs_classes_test[dataset_name + crop_suffix] = save_class_images(dataset_test,
-                                                    os.path.join(target_path, "test", dataset_name + crop_suffix, "jpg"))
-
-    # merge databases
-    logger.info(f"Processing trainval set from {retrieval_dataset_train_name} and {retrieval_dataset_val_name}")
-    db_train = create_train_database_queries(db_images_train, db_classes_train,
-                                             iou_pos_threshold=args.iou_pos_threshold,
-                                             iou_neg_threshold=args.iou_neg_threshold,
-                                             logger=logger)
-    db_val = create_train_database_queries(db_images_val, db_classes_val,
-                                           iou_pos_threshold=args.iou_pos_threshold,
-                                           iou_neg_threshold=args.iou_neg_threshold,
-                                           logger=logger)
-
-    logger.info(f"Processing trainval set from {retrieval_dataset_train_name} and {retrieval_dataset_val_name} with {args.num_random_crops_per_image} random crops")
-    db_train_randomCrops = create_train_database_queries(db_images_train_randomCrops, db_classes_train_randomCrops,
-                                                         iou_pos_threshold=args.iou_pos_threshold,
-                                                         iou_neg_threshold=args.iou_neg_threshold,
-                                                         logger=logger)
-    db_val_randomCrops = create_train_database_queries(db_images_val_randomCrops, db_classes_val_randomCrops,
-                                                       iou_pos_threshold=args.iou_pos_threshold,
-                                                       iou_neg_threshold=args.iou_neg_threshold,
-                                                       logger=logger)
-
-    dbs_test = {}
-    if args.datasets_test:
-        for dataset_name in retrieval_dataset_test_names:
-            logger.info(f"Processing test set {dataset_name} with {args.num_random_crops_per_image} random crops")
-            dbs_test[dataset_name] = create_test_database_queries(dbs_images_test[dataset_name], dbs_classes_test[dataset_name],
-                                                                  iou_pos_threshold=args.iou_pos_threshold,
-                                                                  iou_neg_threshold=args.iou_neg_threshold,
-                                                                  logger=logger)
-
-            logger.info(f"Processing test set {dataset_name + crop_suffix}")
-            dbs_test[dataset_name + crop_suffix] = create_test_database_queries(dbs_images_test[dataset_name + crop_suffix],
-                                                                                dbs_classes_test[dataset_name + crop_suffix],
-                                                                                iou_pos_threshold=args.iou_pos_threshold,
-                                                                                iou_neg_threshold=args.iou_neg_threshold,
-                                                                                logger=logger)
-
-    # save trainval to disk
-    db_trainval = {"train":db_train, "val":db_val}
-    db_fn = os.path.join(os.path.join(target_path, "train", retrieval_dataset_train_name), f"{retrieval_dataset_train_name}.pkl")
-    with open(db_fn, "wb") as f:
-        pickle.dump(db_trainval, f)
-
-    # save train separately for whitening
-    db_fn = os.path.join(os.path.join(target_path, "train", retrieval_dataset_train_name), f"{retrieval_dataset_train_name}-whiten.pkl")
-    with open(db_fn, "wb") as f:
-        pickle.dump(db_train, f)
-
-    # save trainval with random crops to disk
-    db_trainval_randomCrops = {"train":db_train_randomCrops, "val":db_val_randomCrops}
-    db_fn = os.path.join(os.path.join(target_path, "train", retrieval_dataset_train_name + crop_suffix), f"{retrieval_dataset_train_name}{crop_suffix}.pkl")
-    with open(db_fn, "wb") as f:
-        pickle.dump(db_trainval_randomCrops, f)
-    
-    db_fn = os.path.join(os.path.join(target_path, "train", retrieval_dataset_train_name + crop_suffix), f"{retrieval_dataset_train_name}{crop_suffix}-whiten.pkl")
-    with open(db_fn, "wb") as f:
-        pickle.dump(db_train_randomCrops, f)
-
-    # save test to disk
-    if args.datasets_test:
-        for dataset_name in retrieval_dataset_test_names:
-            db_fn = os.path.join(os.path.join(target_path, "test", dataset_name ), f"gnd_{dataset_name}.pkl")
-            with open(db_fn, "wb") as f:
-                pickle.dump(dbs_test[dataset_name], f)
-
-            # save test with random crops to disk
-            db_fn = os.path.join(os.path.join(target_path, "test", dataset_name + crop_suffix), f"gnd_{dataset_name}{crop_suffix}.pkl")
-            with open(db_fn, "wb") as f:
-                pickle.dump( dbs_test[dataset_name + crop_suffix], f )
+    prepare_dataset(target_path,
+                    retrieval_dataset_train_name, dataset_train,
+                    retrieval_dataset_val_name, dataset_val,
+                    args.iou_pos_threshold, args.iou_neg_threshold,
+                    args.num_queries_image_to_image,
+                    logger,
+                    retrieval_dataset_test_names=retrieval_dataset_test_names, datasets_test=datasets_test,
+                    num_random_crops_per_image=args.num_random_crops_per_image)
 
 
 def create_train_database_queries(db_images, db_classes_train,
                                   iou_pos_threshold,
                                   iou_neg_threshold,
-                                  logger):
+                                  logger,
+                                  num_queries_image_to_image=0):
     db_train = merge_dicts_of_lists(db_images, db_classes_train)
    # create train queries
     db_train["qidxs"] = []
@@ -297,14 +277,36 @@ def create_train_database_queries(db_images, db_classes_train,
             else:
                 gtbox_hash[imageid] = [i_crop]
 
+    # get a lists of crops per class
+    hash_crop_per_label = {}
+    for i_crop in range(len(db_images["bbox"])):
+        class_id = db_images["cluster"][i_crop]
+        if class_id in hash_crop_per_label:
+            hash_crop_per_label[class_id].append(i_crop)
+        else:
+            hash_crop_per_label[class_id] = [i_crop]
+    for class_id in hash_crop_per_label:
+        hash_crop_per_label[class_id] = set(hash_crop_per_label[class_id])
+
     # add pairs of queries and positives
     max_rand_crop_iou = 0
     for i_crop, prop_label in enumerate(db_images["cluster"]):
         if db_images["type"][i_crop] == "gtproposal":
             # exclude boxes with the difficult flag and missing classes
-            if not db_images["difficult"][i_crop] and prop_label in query_hash:
-                db_train["qidxs"].append(query_offset + query_hash[prop_label])
-                db_train["pidxs"].append(i_crop)
+            if not db_images["difficult"][i_crop]:
+                if prop_label in query_hash:
+                    db_train["qidxs"].append(query_offset + query_hash[prop_label])
+                    db_train["pidxs"].append(i_crop)
+                # add pairs from positives of the same class
+                if num_queries_image_to_image > 0:
+                    candidate_positives = hash_crop_per_label[prop_label] - set([i_crop])
+                    if len(candidate_positives) > num_queries_image_to_image:
+                        new_positives = random.sample(list(candidate_positives), num_queries_image_to_image)
+                    else:
+                        new_positives = list(candidate_positives)
+                    for j_crop in new_positives:
+                        db_train["qidxs"].append(i_crop)
+                        db_train["pidxs"].append(j_crop)
         elif db_images["type"][i_crop] == "randomcrop":
             # collect all GT boxes from that image
             imageid = db_images["imageid"][i_crop]
@@ -315,22 +317,26 @@ def create_train_database_queries(db_images, db_classes_train,
 
             ious = box_iou(gt_boxes, this_box).view(-1)
 
-            # do two passes: first exclude objects with  iou > iou_neg_threshold
-            # then add objects with  iou > iou_pos_threshold as positives
+            # do two passes: first exclude objects with iou > iou_neg_threshold
+            # then add objects with iou > iou_pos_threshold as positives
             for i_gt, iou in enumerate(ious):
                 max_rand_crop_iou = max(max_rand_crop_iou, iou)
                 gt_label = gt_labels[i_gt]
                 if gt_label in query_hash:
                     if iou > iou_neg_threshold:
-                        # if iou is somewhere in the middle than make this crop junk - unknown label
                         db_train["cluster"][i_crop] = gt_label
             for i_gt, iou in enumerate(ious):
                 gt_label = gt_labels[i_gt]
-                if gt_label in query_hash:
-                    if iou > iou_pos_threshold:
-                        # if iou is somewhere in the middle than make this crop junk - unknown label
+                if iou > iou_pos_threshold:
+                    if gt_label in query_hash:
+                        j_crop = query_offset + query_hash[gt_label]
+                    elif len(hash_crop_per_label[gt_label]) > 0:
+                        j_crop = random.sample(list(hash_crop_per_label[gt_label]), 1)[0]
+                    else:
+                        j_crop = None
+                    if j_crop is not None:
                         db_train["cluster"][i_crop] = gt_label
-                        db_train["qidxs"].append(query_offset + query_hash[gt_label])
+                        db_train["qidxs"].append(j_crop)
                         db_train["pidxs"].append(i_crop)
         else:
             raise("Crop of unknown type {}".format(db_images["type"][i_crop]))
@@ -345,7 +351,8 @@ def create_train_database_queries(db_images, db_classes_train,
 def create_test_database_queries(db_images_test, db_classes_test,
                                  iou_pos_threshold,
                                  iou_neg_threshold,
-                                 logger):
+                                 logger,
+                                 num_queries_image_to_image=0):
     db_test = {"gnd":[], "imlist":[], "qimlist":[]}
 
     db_test["imlist"] = [cid2filename(cid, prefix="") for cid in db_images_test["cids"]]
@@ -361,6 +368,40 @@ def create_test_database_queries(db_images_test, db_classes_test,
         db_test["gnd"].append(gnd)
         query_label = db_classes_test["cluster"][i_query]
         query_hash[query_label] = i_query
+
+    # add extra queries from some gt boxes
+    if num_queries_image_to_image > 0:
+        # select num_queries_image_to_image queries in each class
+        gtbox_hash_per_class = {}
+        for i_crop in range(len(db_images_test["cluster"])):
+            classid = db_images_test["cluster"][i_crop]
+            if classid != -1 and classid in gtbox_hash_per_class: # -1 corresponds to background
+                gtbox_hash_per_class[classid].append(i_crop)
+            else:
+                gtbox_hash_per_class[classid] = [i_crop]
+
+        query_gt_per_label = {}
+        query_original_id = {}
+        for class_id in gtbox_hash_per_class:
+            # remove all difficult boxes
+            gtbox_hash_per_class[class_id] = [i_image for i_image in gtbox_hash_per_class[class_id] if not db_images_test["difficult"][i_image]]
+            # leave at most num_queries_image_to_image queries in each class
+            if len(gtbox_hash_per_class[class_id]) > num_queries_image_to_image:
+                subsample = random.sample(gtbox_hash_per_class[class_id], num_queries_image_to_image)
+                gtbox_hash_per_class[class_id] = subsample
+            gtbox_hash_per_class[class_id] = sorted(gtbox_hash_per_class[class_id])
+            # add selected GTs as queries
+            query_gt_per_label[class_id] = []
+            for i_image in gtbox_hash_per_class[class_id]:
+                gnd = {"bbx": None, "ok":[], "junk":[]}
+                crop_box = db_images_test["bbox"][i_image]  # format (x1,y1,x2,y2)
+                full_image_box = [0, 0, crop_box[2] - crop_box[0], crop_box[3] - crop_box[1]]
+                gnd["bbx"] = full_image_box
+                new_query_id = len(db_test["gnd"])
+                query_gt_per_label[class_id].append(new_query_id)
+                query_original_id[new_query_id] = i_image
+                db_test["gnd"].append(gnd)
+                db_test["qimlist"].append(cid2filename(db_images_test["cids"][i_image], prefix=""))
 
     # hash GT boxes
     gtbox_hash = {}
@@ -379,6 +420,7 @@ def create_test_database_queries(db_images_test, db_classes_test,
     max_rand_crop_iou = 0.0
     for i_crop, label in enumerate(db_images_test["cluster"]):
         if db_images_test["type"][i_crop] == "gtproposal":
+            # add the gt box as positive to the query from the label image
             if label in query_hash:
                 # check that this label exists in this set - used to distinguish test and test only
                 if db_images_test["difficult"][i_crop] == 1:
@@ -387,6 +429,17 @@ def create_test_database_queries(db_images_test, db_classes_test,
                 else:
                     db_test["gnd"][ query_hash[label] ]["ok"].append(i_crop)
                     num_ok_pairs += 1
+            # add this box to the GT queries of the same label
+            if num_queries_image_to_image > 0 and label in query_gt_per_label:
+                for i_gt_query in query_gt_per_label[label]:
+                    # add pair to itself as junk not to influence anything
+                    if db_images_test["difficult"][i_crop] == 1 or query_original_id[i_gt_query] == i_crop:
+                        db_test["gnd"][ i_gt_query ]["junk"].append(i_crop)
+                        num_junk_pairs += 1
+                    else:
+                        db_test["gnd"][ i_gt_query ]["ok"].append(i_crop)
+                        num_ok_pairs += 1
+
         elif db_images_test["type"][i_crop] == "randomcrop":
             # collect all GT boxes from that image
             imageid = db_images_test["imageid"][i_crop]
@@ -414,13 +467,28 @@ def create_test_database_queries(db_images_test, db_classes_test,
                         else:
                             # if iou is small than make this crop negative - no mentions in db_test
                             pass
+                     # add this box to the GT queries of the same label
+                    if num_queries_image_to_image > 0 and gt_label in query_gt_per_label:
+                        for i_gt_query in query_gt_per_label[gt_label]:
+                            if iou > iou_pos_threshold:
+                                # if iou is very big than make this crop positive to the corresponding label
+                                db_test["gnd"][ i_gt_query ]["ok"].append(i_crop)
+                                num_ok_pairs += 1
+                            elif iou > iou_neg_threshold:
+                                # if iou is somewhere in the middle than make this crop junk - unknown label
+                                db_test["gnd"][ i_gt_query ]["junk"].append(i_crop)
+                                num_junk_pairs += 1
+                            else:
+                                # if iou is small than make this crop negative - no mentions in db_test
+                                pass
+
         else:
             raise("Crop of unknown type {}".format(db_images_test["type"][i_crop]))
 
     logger.info("Created {} ok and {} junk pairs out of {} labels and {} detections".format(num_ok_pairs, num_junk_pairs, len(db_classes_test["cids"]), len(db_images_test["cids"])))
     if max_rand_crop_iou > 0:
         logger.info("Max IoU of randcrops and GT equals {}".format(max_rand_crop_iou))
-   
+
     return db_test
 
 
@@ -486,7 +554,7 @@ def save_class_images(dataset, tgt_image_path, extension=".jpg"):
 
         width, height = label_image.size
         box = [0, 0, width, height]  # format (x1,y1,x2,y2)
-        
+
         # add to the db structure
         db["cids"].append(cid)
         db["cluster"].append(lbl)  # use labels as clusters not to sample negatives from the same object
@@ -504,7 +572,7 @@ def save_class_images(dataset, tgt_image_path, extension=".jpg"):
 def save_cropped_boxes(dataset, tgt_image_path, extension=".jpg", num_random_crops_per_image=0):
     # crop all the boxes
     db = {"cids":[], "cluster":[], "gtbboxid":[], "classid":[], "imageid":[], "difficult":[], "type":[], "size":[], "bbox":[]}
-    
+
     for image_id in tqdm(dataset.image_ids):
         img = dataset._get_dataset_image_by_id(image_id)
         boxes = dataset.get_image_annotation_for_imageid(image_id)
@@ -550,7 +618,7 @@ def save_cropped_boxes(dataset, tgt_image_path, extension=".jpg", num_random_cro
                 box = boxes[i_box].bbox_xyxy.view(-1)
                 box = [b.item() for b in box]
                 cropped_img = img.crop(box)
-                
+
                 if i_box < num_gt_boxes:
                     lbl = boxes[i_box].get_field("labels").item()
                     dif_flag = boxes[i_box].get_field("difficult").item()
@@ -582,7 +650,7 @@ def save_cropped_boxes(dataset, tgt_image_path, extension=".jpg", num_random_cro
                 db["gtbboxid"].append(box_id)
                 db["imageid"].append(image_id)
                 db["difficult"].append(dif_flag)
-                if i_box < num_gt_boxes: 
+                if i_box < num_gt_boxes:
                     db["type"].append("gtproposal")
                 else:
                     db["type"].append("randomcrop")

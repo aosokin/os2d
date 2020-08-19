@@ -2,22 +2,21 @@
 
 This repo is the implementation of the following paper:
 
-OS2D: One-Stage One-Shot Object Detection by Matching Anchor Features  
-Anton Osokin, Denis Sumin, Vasily Lomakin  
-[arXiv:2003.06800v1](http://arxiv.org/abs/2003.06800), 2020
+OS2D: One-Stage One-Shot Object Detection by Matching Anchor Features<br>
+Anton Osokin, Denis Sumin, Vasily Lomakin<br>
+In proceedings of the European Conference on Computer Vision (ECCV), 2020
 
-If you use our ideas, code or data, please, cite our paper.
+If you use our ideas, code or data, please, cite our paper ([available on arXiv](https://arxiv.org/abs/2003.06800)).
 
 <details>
 <summary>Citation in bibtex</summary>
 
 ```
-@article{osokin2020os2d,
-    title={{OS2D}: One-Stage One-Shot Object Detection by Matching Anchor Features}},
-    author={Anton Osokin and Denis Sumin and Vasily Lomakin},
-    year={2020},
-    journal={arXiv:2003.06800v1},
-}
+@inproceedings{osokin20os2d,
+    title = {{OS2D}: One-Stage One-Shot Object Detection by Matching Anchor Features},
+    author = {Anton Osokin and Denis Sumin and Vasily Lomakin},
+    booktitle = {proceedings of the European Conference on Computer Vision (ECCV)},
+    year = {2020} }
 ```
 </details>
 
@@ -135,7 +134,7 @@ Note that these runs need a lot of RAM due to caching of the whole training set.
 
 For the rest of the training scripts see [below](#rerunning-experiments-on-retail-and-instre-datasets).
 
-### Rerunning experiments on retail and INSTRE datasets
+### Rerunning experiments
 All the experiments ob this project were run with [our job helper](./os2d/utils/launcher.py).
 For each experiment, one program an experiment structure (in python) and calls several technical function provided by the launcher.
 See, e.g., [this file](./experiments/launcher_exp1.py) for an example.
@@ -157,6 +156,7 @@ Our experiments can be found here:
 1. [Experiments with OS2D](experiments/README.md)
 2. [Experiments with the detector-retrieval baseline](baselines/detector_retrieval/README.md)
 3. [Experiments with the CoAE baseline](baselines/CoAE/README.md)
+4. [Experiments on the ImageNet dataset](experiments/README_ImageNet.md)
 
 
 ### Baselines

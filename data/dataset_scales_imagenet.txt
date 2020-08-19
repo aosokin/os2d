@@ -1,0 +1,10 @@
+2020-05-27 17:11:34,745 get_dataset_scales.dataset INFO: Preparing the dataset from the RepMet format: version imagenet-repmet-val-5000, eval scale None, image caching False
+2020-05-27 17:11:53,588 get_dataset_scales.dataset INFO: GT images are not provided
+2020-05-27 17:14:09,180 get_dataset_scales.dataset INFO: Found 4942 data images
+2020-05-27 17:14:09,183 get_dataset_scales.dataset INFO: Loaded dataset imagenet-repmet-val-5000 with 4942 images, 5000 boxes, 1 classes
+Reading images from one-shot-detection/data/ImageNet-RepMet/ILSVRC/Data/CLS-LOC
+Found 4942 images
+Found 5000 non-difficult objects
+Average size of object = 455.74 for image size = 1000
+Median = 412.86, q10 = 105.80, q90 = 882.72
+To get objects to size 240, images should be of size 581

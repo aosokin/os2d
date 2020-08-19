@@ -6,16 +6,18 @@ import math
 import copy
 import logging
 import pickle
+import glob
 import numpy as np
 import pandas as pd
+from PIL import Image
+import xml.etree.ElementTree as ElementTree
 
 import torch
 import torch.utils.data as data
 import torchvision.transforms as transforms
+
+
 from os2d.structures.bounding_box import BoxList
-
-from PIL import Image
-
 from os2d.engine.augmentation import DataAugmentation
 from os2d.utils import get_image_size_after_resize_preserving_aspect_ratio, mkdir, read_image
 from os2d.structures.feature_map import FeatureMapSize
@@ -284,11 +286,271 @@ def build_instre_dataset(data_path, name, eval_scale, cache_images=False, no_ima
     return dataset
 
 
+def build_imagenet_test_episodes(subset_name, data_path, logger):
+    episode_id = int(subset_name.split('-')[-1])
+    epi_data_name = "epi_inloc_in_domain_1_5_10_500"
+    image_size = 1000
+
+    dataset_path = os.path.join(data_path, "ImageNet-RepMet")
+    roidb_path = os.path.join(dataset_path, "RepMet_CVPR2019_data", "data", "Imagenet_LOC", "voc_inloc_roidb.pkl")
+    with open(roidb_path, 'rb') as fid:
+        roidb = pickle.load(fid, encoding='latin1')
+    episodes_path = os.path.join(dataset_path, "RepMet_CVPR2019_data", "data", "Imagenet_LOC", "episodes", f"{epi_data_name}.pkl")
+    with open(episodes_path, 'rb') as fid:
+        episode_data = pickle.load(fid, encoding='latin1')
+
+    logger.info(f"Extracting episode {episode_id} out of {len(episode_data)}")
+    episode = episode_data[episode_id]
+
+    dataset_image_path = os.path.join(data_path, "ImageNet-RepMet", "ILSVRC")
+
+    SWAP_IMG_PATH_SRC = "/dccstor/leonidka1/data/imagenet/ILSVRC/"
+    def _get_image_path(image_path):
+        image_path = image_path.replace(SWAP_IMG_PATH_SRC, "")
+        return image_path
+
+    # episode["epi_cats"] - list of class ids
+    # episode["query_images"] - list of path to the episode images
+    # episode["epi_cats_names"] - list of names of the episode classes
+    # episode["train_boxes"] - list of box data about class boxes
+
+    num_classes = len(episode["epi_cats"])
+
+    gt_path = os.path.join(dataset_path, epi_data_name)
+    gt_path = os.path.join(gt_path, f"classes_episode_{episode_id}")
+    gt_image_path = os.path.join(gt_path, "images")
+    mkdir(gt_image_path)
+    classdatafile = os.path.join(gt_path, f"classes_{epi_data_name}_episode_{episode_id}.csv")
+    if not os.path.isfile(classdatafile):
+        logger.info(f"Did not find data file {classdatafile}, creating it from the RepMet source data")
+        # create the annotation file from the raw dataset
+        gtboxframe = [] # will be creating dataframe from a list of dicts
+
+        gt_filename_by_id = {}
+        for i_class in range(len(episode["train_boxes"])):
+            train_boxes_data = episode["train_boxes"][i_class]
+            class_id = train_boxes_data[0]
+            assert class_id in episode["epi_cats"], f"class_id={class_id} should be listed in episode['epi_cats']={episode['epi_cats']}"
+
+            query_image_path_original = _get_image_path(train_boxes_data[2])
+            query_bbox = train_boxes_data[3]
+            query_bbox = query_bbox.flatten()
+
+            classfilename = f"{class_id:05d}_{'_'.join(query_image_path_original.split('/'))}"
+
+            if class_id not in gt_filename_by_id:
+                logger.info(f"Adding query #{len(gt_filename_by_id)} - {class_id}: {query_image_path_original}")
+
+                if not os.path.isfile(classfilename) or True:
+                    query_img = read_image(os.path.join(dataset_image_path, query_image_path_original))
+                    query_img_cropped_box = query_img.crop(query_bbox)
+                    query_img_cropped_box.save(os.path.join(gt_image_path, classfilename))
+
+                gt_filename_by_id[class_id] = classfilename
+            else:
+                logger.info(f"WARNING: class {class_id} has multiple entries in GT image {query_image_path_original}, using the first box as GT")
+
+        for class_id in episode["epi_cats"]:
+            if class_id not in gt_filename_by_id:
+                logger.info(f"WARNING: ground truth for class {class_id} not found in episode {episode_id}")
+
+
+        def convert_the_box_to_relative(box, imsize):
+            lx = float(box[0]) / imsize.w
+            ty = float(box[1]) / imsize.h
+            rx = float(box[2]) / imsize.w
+            by = float(box[3]) / imsize.h
+            return lx, ty, rx, by
+
+        def find_image_path_in_roidb(image_file_name, roidb):
+            for i_image, im_data in enumerate(roidb["roidb"]):
+                if im_data["flipped"]:
+                    raise RuntimeError(f"Image {i_image} data {im_data} has flipped flag on")
+                if im_data["image"] == image_file_name:
+                    return i_image
+            return None
+
+        for image_file_name in episode["query_images"]:
+            # add one bbox to the annotation
+            #     required_columns = ["imageid", "imagefilename", "classid", "classfilename", "gtbboxid", "difficult", "lx", "ty", "rx", "by"]
+            image_id = find_image_path_in_roidb(image_file_name, roidb)
+            im_data = roidb["roidb"][image_id]
+            image_file_name = _get_image_path(image_file_name)
+
+            imsize = FeatureMapSize(w=int(im_data["width"]), h=int(im_data["height"]))
+
+            boxes_xyxy = im_data["boxes"]
+            classes = im_data["gt_classes"]
+
+            for box, class_id in zip(boxes_xyxy, classes):
+                if class_id in gt_filename_by_id:
+                    item = OrderedDict()
+                    item["imageid"] = int(image_id)
+                    item["imagefilename"] = image_file_name
+                    item["classid"] = int(class_id)
+                    item["classfilename"] = gt_filename_by_id[class_id]
+                    item["gtbboxid"] = len(gtboxframe)
+                    item["difficult"] = 0
+                    item["lx"], item["ty"], item["rx"], item["by"] = convert_the_box_to_relative(box, imsize)
+                    gtboxframe.append(item)
+
+        gtboxframe = pd.DataFrame(gtboxframe)
+        gtboxframe.to_csv(classdatafile)
+
+    gtboxframe = pd.read_csv(classdatafile)
+
+    return gtboxframe, gt_image_path, dataset_image_path, image_size
+
+
+def build_imagenet_trainval(subset_name, data_path, logger):
+
+    image_size = 1000
+    dataset_path = os.path.join(data_path, "ImageNet-RepMet", "ILSVRC")
+    repmet_test_classes_path = os.path.join(data_path, "ImageNet-RepMet", "repmet_test_classes.txt")
+    annotation_path = os.path.join(dataset_path, "Annotations", "CLS-LOC")
+    image_path = os.path.join(dataset_path, "Data", "CLS-LOC")
+    image_ext = ".JPEG"
+
+    # get test classes to exclude
+    with open(repmet_test_classes_path, "r") as fid:
+        repmet_test_classes = fid.readlines()
+    classes_to_exclude = {}
+    for cl in repmet_test_classes:
+        classes_to_exclude[cl[:-1]] = 1 # cut off the EOL symbol
+
+    # get annotations
+    if subset_name.startswith("train"):
+        list_of_annotations = glob.glob(os.path.join(annotation_path, "train", "*", "*.xml"))
+    else:
+        list_of_annotations = glob.glob(os.path.join(annotation_path, "val", "*.xml"))
+    list_of_annotations = sorted(list_of_annotations)
+
+
+    def read_annotation(xml_file: str):
+        tree = ElementTree.parse(xml_file)
+        root = tree.getroot()
+
+        filename = root.find('filename').text
+        im_size = root.find("size")
+        width = int(im_size.find("width").text)
+        height = int(im_size.find("height").text)
+        im_size = FeatureMapSize(h=height, w=width)
+
+        bboxes = []
+        class_ids = []
+        difficult_flags = []
+
+        for boxes in root.iter("object"):
+            ymin, xmin, ymax, xmax = None, None, None, None
+            difficult_flag = int(boxes.find("difficult").text)
+            class_id = boxes.find("name").text
+            for box in boxes.findall("bndbox"):
+                assert ymin is None
+                ymin = int(box.find("ymin").text)
+                xmin = int(box.find("xmin").text)
+                ymax = int(box.find("ymax").text)
+                xmax = int(box.find("xmax").text)
+
+            cur_box = [xmin, ymin, xmax, ymax]
+            bboxes.append(cur_box)
+            difficult_flags.append(difficult_flag)
+            class_ids.append(class_id)
+
+        return filename, bboxes, class_ids, difficult_flags, im_size
+
+    def convert_the_box_to_relative(box, imsize):
+        lx = float(box[0]) / imsize.w
+        ty = float(box[1]) / imsize.h
+        rx = float(box[2]) / imsize.w
+        by = float(box[3]) / imsize.h
+        return lx, ty, rx, by
+
+
+    gtboxframe = [] # will be creating dataframe from a list of dicts
+    for image_id, annotation_file in enumerate(list_of_annotations):
+        filename, bboxes, class_ids, difficult_flags, im_size = read_annotation(annotation_file)
+
+        if subset_name == "train":
+            class_id = filename.split("_")[0]
+            if class_id in classes_to_exclude:
+                # skip the entire images associated with classes to exclude
+                continue
+            image_file_name = os.path.join("train", class_id, filename + image_ext)
+        else:
+            image_file_name = os.path.join("val", filename + image_ext)
+
+        for bbox, class_id, difficult_flag in zip(bboxes, class_ids, difficult_flags):
+            if class_id in classes_to_exclude:
+                # skip annotations from classes that need to be excluded
+                continue
+
+            item = OrderedDict()
+            item["imageid"] = image_id
+            item["imagefilename"] = image_file_name
+            item["classid"] = int(class_id[1:]) # cut off "n" at the beginning of an ImageNet class
+            item["classfilename"] = None
+            item["gtbboxid"] = len(gtboxframe)
+            item["difficult"] = difficult_flag
+            item["lx"], item["ty"], item["rx"], item["by"] = convert_the_box_to_relative(bbox, im_size)
+            gtboxframe.append(item)
+
+    if subset_name.startswith("val-"):
+        # subsample validation set to have at most 5k boxes
+        new_val_size = int(subset_name.split('-')[-1])
+        assert 0 < new_val_size <= len(gtboxframe), f"New size of validation {new_val_size} should be positive and <= {len(gtboxframe)}"
+        gtboxframe = gtboxframe[::len(gtboxframe)//new_val_size]
+        gtboxframe = gtboxframe[:new_val_size]
+
+    gtboxframe = pd.DataFrame(gtboxframe)
+
+    gt_image_path = None
+    return gtboxframe, gt_image_path, image_path, image_size
+
+
+def build_repmet_dataset(data_path, name, eval_scale=None, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
+    logger = logging.getLogger(f"{logger_prefix}.dataset")
+    logger.info("Preparing the dataset from the RepMet format: version {0}, eval scale {1}, image caching {2}".format(name, eval_scale, cache_images))
+    # The RepMet format is defined here: https://github.com/jshtok/RepMet
+
+    # define a subset split (using closure)
+    subset_name = name.lower()
+    assert subset_name.startswith("imagenet-repmet"), ""
+    subset_name = subset_name[len("imagenet-repmet"):]
+    subsets = ["test-episode", "train", "val"]
+    found_subset = False
+    episode_id = None
+    for subset in subsets:
+        if subset_name.startswith("-"+subset):
+            found_subset = subset
+            break
+    assert found_subset, "Could not identify subset {}".format(subset_name)
+
+    subset_name = subset_name[1:] # cut off dash at the beginning
+    if found_subset == "test-episode":
+        gtboxframe, gt_image_path, dataset_image_path, image_size = \
+            build_imagenet_test_episodes(subset_name, data_path, logger)
+    else:
+        gtboxframe, gt_image_path, dataset_image_path, image_size = \
+            build_imagenet_trainval(subset_name, data_path, logger)
+
+
+    # get these automatically from gtboxframe
+    image_ids = None
+    image_file_names = None
+
+    dataset = DatasetOneShotDetection(gtboxframe, gt_image_path, dataset_image_path, name, image_size, eval_scale,
+                                      image_ids=image_ids, image_file_names=image_file_names,
+                                      cache_images=cache_images, no_image_reading=no_image_reading, logger_prefix=logger_prefix)
+    return dataset
+
+
 def build_dataset_by_name(data_path, name, eval_scale, cache_images=False, no_image_reading=False, logger_prefix="OS2D"):
     if name.lower().startswith("grozi"):
         return build_grozi_dataset(data_path, name, eval_scale, cache_images=cache_images, no_image_reading=no_image_reading, logger_prefix=logger_prefix)
     elif name.lower().startswith("instre"):
         return build_instre_dataset(data_path, name, eval_scale, cache_images=cache_images, no_image_reading=no_image_reading, logger_prefix=logger_prefix)
+    elif name.lower().startswith("imagenet-repmet"):
+        return build_repmet_dataset(data_path, name, eval_scale, cache_images=cache_images, no_image_reading=no_image_reading, logger_prefix=logger_prefix)
     else:
         return build_eval_dataset(data_path, name, eval_scale, cache_images=cache_images, no_image_reading=no_image_reading, logger_prefix=logger_prefix)
 
@@ -361,7 +623,7 @@ class DatasetOneShotDetection(data.Dataset):
         self.image_size_per_image_id = OrderedDict()
         self.image_per_image_id = OrderedDict()
         for image_id, image_file in zip(self.image_ids, self.image_file_names):
-            if image_id not in self.image_path_per_image_id :
+            if image_id not in self.image_path_per_image_id:
                 # store the image path
                 img_path = os.path.join(self.image_path, image_file)
                 self.image_path_per_image_id[image_id] = img_path
@@ -373,13 +635,16 @@ class DatasetOneShotDetection(data.Dataset):
 
     def _read_dataset_gt_images(self):
         self.gt_images_per_classid = OrderedDict()
-        for index, row in self.gtboxframe.iterrows():
-            gt_file = row["classfilename"]
-            class_id = row["classid"]
-            if class_id not in self.gt_images_per_classid:
-                # if the GT image is not read save it to the dataset
-                self.gt_images_per_classid[class_id] = read_image(os.path.join(self.gt_path, gt_file))
-        self.logger.info("Read {0} GT images".format(len(self.gt_images_per_classid)))
+        if self.gt_path is not None:
+            for index, row in self.gtboxframe.iterrows():
+                gt_file = row["classfilename"]
+                class_id = row["classid"]
+                if class_id not in self.gt_images_per_classid:
+                    # if the GT image is not read save it to the dataset
+                    self.gt_images_per_classid[class_id] = read_image(os.path.join(self.gt_path, gt_file))
+            self.logger.info("Read {0} GT images".format(len(self.gt_images_per_classid)))
+        else:
+            self.logger.info("GT images are not provided")
 
     def split_images_into_buckets_by_size(self):
         buckets = []

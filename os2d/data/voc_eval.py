@@ -4,6 +4,7 @@
 # (See https://github.com/chainer/chainercv/blob/master/chainercv/evaluations/eval_detection_voc.py)
 
 import os
+import copy
 from collections import defaultdict
 import numpy as np
 
@@ -56,12 +57,18 @@ def eval_detection_voc(pred_boxlists, gt_boxlists, iou_thresh=0.5, use_07_metric
     ap = calc_detection_voc_ap(prec, rec, use_07_metric=use_07_metric)
     recall, recall_per_class, n_pos = calc_detection_recall(rec, n_pos)
 
+    prec_one_class, rec_one_class, n_pos_one_class = calc_detection_voc_prec_rec(
+        pred_boxlists=pred_boxlists, gt_boxlists=gt_boxlists, iou_thresh=iou_thresh,
+        merge_classes_together=True)
+    ap_one_class = calc_detection_voc_ap(prec_one_class, rec_one_class, use_07_metric=use_07_metric)
+
     return {'ap_per_class': ap, 'map': np.nanmean(ap), 'map_weighted': np.nansum(ap * n_pos / n_pos.sum()),
             'recall_per_class': recall_per_class, 'recall': recall,
-            'n_pos': n_pos, 'prec': prec, 'rec' : rec}
+            'n_pos': n_pos, 'prec': prec, 'rec' : rec,
+            'ap_joint_classes': ap_one_class[0]}
 
 
-def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5):
+def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5, merge_classes_together=False):
     """Calculate precision and recall based on evaluation code of PASCAL VOC.
     This function calculates precision and recall of
     predicted bounding boxes obtained from a dataset which has :math:`N`
@@ -131,6 +138,14 @@ def calc_detection_voc_prec_rec(gt_boxlists, pred_boxlists, iou_thresh=0.5):
                     selec[gt_idx] = True
                 else:
                     match[l].append(0)
+
+    if merge_classes_together:
+        n_pos = {0: sum(n_pos[i] for i in n_pos)}
+        # merge lists together, copy to avoid rewriting the old lists
+        old_score = copy.deepcopy(score)
+        score = {0: sum((old_score[i] for i in old_score), [])}
+        old_match = copy.deepcopy(match)
+        match = {0: sum((old_match[i] for i in old_match), [])}
 
     n_fg_class = max(n_pos.keys()) + 1
     prec = [None] * n_fg_class

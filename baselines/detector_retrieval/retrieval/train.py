@@ -54,6 +54,8 @@ parser.add_argument('--test-freq', default=1, type=int,
                     help='run test evaluation every N epochs (default: 1)')
 
 # network architecture and initialization options
+parser.add_argument('--network-path', type=str, default=None,
+                    help="network path, destination where network is saved")
 parser.add_argument('--arch', '-a', default='resnet101', choices=model_names,
                     help='model architecture: ' +
                         ' | '.join(model_names) +
@@ -162,6 +164,17 @@ def main():
     # model_params['std'] = ...  # will use default
     model_params['pretrained'] = args.pretrained
     model = init_network(model_params)
+
+    if args.network_path is not None:
+        state = torch.load(args.network_path)
+        extra_keys = ["pool.p", "whiten.weight", "whiten.bias"]
+        for k in extra_keys:
+            if k in model.state_dict() and k not in state['state_dict']:
+                state['state_dict'][k] = model.state_dict()[k]
+        model.load_state_dict(state['state_dict'])
+
+        print(">>>> loaded network from", args.network_path)
+        print(model.meta_repr())
 
     # move network to gpu
     model.cuda()
