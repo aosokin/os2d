@@ -34,6 +34,10 @@ See [INSTALL.md](INSTALL.md) for the package installation.
 ## Demo
 See our [demo-notebook](./demo.ipynb) for an illustration of our method.
 
+## Demo-API
+See our [demo-API-notebook](./demo-api.ipynb) for an illustration of deploying the method in a Docker Container.
+> See [Image Build instructions here](FASTAPI.md)
+
 ## Dataset installation
 1. Grozi-3.2k dataset with our annotation (0.5GB): download from [Google Drive](https://drive.google.com/open?id=1Fx9lvmjthe3aOqjvKc6MJpMuLF22I1Hp) or with the [magic command](https://medium.com/@acpanjan/download-google-drive-files-using-wget-3c2c025a8b99) and unpack to $OS2D_ROOT/data
 ```bash

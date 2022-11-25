@@ -416,3 +416,24 @@ def cat_boxlist(bboxes):
         cat_boxes.add_field(field, data)
 
     return cat_boxes
+
+def filter_bbox(boxes, score_threshold=0.0, max_dets=None):
+    labels = boxes.get_field("labels").clone()
+    scores = boxes.get_field("scores").clone()
+    good_ids = torch.nonzero(scores.float() > score_threshold).view(-1)
+    if good_ids.numel() > 0:
+        if max_dets is not None:
+                _, ids = scores[good_ids].sort(descending=False)
+                good_ids = good_ids[ids[-max_dets:]]
+        boxes = boxes[good_ids].cpu()
+        labels = labels[good_ids].cpu()
+        scores = scores[good_ids].cpu()
+    else:
+        boxes = BoxList.create_empty(boxes.image_size)
+        labels = torch.LongTensor(0)
+        scores = torch.FloatTensor(0)
+    
+    return scores, boxes.bbox_xyxy
+
+def convert_xyxy_bbox_to_relative_coords(bbox, im_width, im_height):
+    return [bbox[0] / im_width, bbox[1] / im_height, bbox[2] / im_width, bbox[3] / im_height]

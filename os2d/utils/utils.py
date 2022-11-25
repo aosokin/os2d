@@ -3,7 +3,8 @@ import math
 import random
 import errno
 from PIL import Image
-
+from io import BytesIO
+import base64
 import numpy as np
 
 import torch
@@ -70,3 +71,6 @@ def read_image(image_path):
 
 def ceildiv(a, b):
     return -(-a // b)
+
+def decode_base64_to_image(base64_str):
+    return Image.open(BytesIO(base64.b64decode(base64_str)))
