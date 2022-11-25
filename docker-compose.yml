@@ -1,0 +1,18 @@
+version: '3.4'
+
+services:
+  os2d:
+    build:
+      context: ./Docker/
+      args:
+        USER_UID: ${USER_UID}
+        USER_GID: ${USER_GID}
+        OS2D_ROOT: ${WORKDIR}
+    image: os2d:latest
+
+    user: "${USER_UID}:${USER_GID}"    
+    ports: 
+      - "${CUSTOM_PORT}:${CUSTOM_PORT}"    
+    volumes:
+      - .:/workspace
+    command: uvicorn app:app --port ${CUSTOM_PORT} --host 0.0.0.0
