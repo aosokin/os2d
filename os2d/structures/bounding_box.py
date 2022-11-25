@@ -434,3 +434,6 @@ def filter_bbox(boxes, score_threshold=0.0, max_dets=None):
         scores = torch.FloatTensor(0)
     
     return scores, boxes.bbox_xyxy
+
+def convert_xyxy_bbox_to_relative_coords(bbox, im_width, im_height):
+    return [bbox[0] / im_width, bbox[1] / im_height, bbox[2] / im_width, bbox[3] / im_height]
