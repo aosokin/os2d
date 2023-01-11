@@ -501,7 +501,7 @@ if __name__ == '__main__':
       args_val = copy.deepcopy(args)
       args_val.imdbval_name = args.dataset_val
 
-      mAP = test(args_val, model=fasterRCNN)
+      mAP = test(args_val, model=fasterRCNN.module.state_dict(), network=args.net)
 
       if mAP > best_model_mAP:
           # save the model as the current best

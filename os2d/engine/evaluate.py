@@ -125,6 +125,7 @@ def evaluate(dataloader, net, cfg, criterion=None, print_per_class_results=False
                                             class_image_augmentation=cfg.eval.class_image_augmentation)
 
         if cfg.is_cuda:
+            del loc_targets_pyramid, losses_iter, class_targets_pyramid, image_class_scores_pyramid, transform_corners_pyramid
             torch.cuda.empty_cache()
 
     # normalize by number of steps
