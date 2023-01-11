@@ -58,7 +58,7 @@ def parse_args():
     return args
 
 
-def test(args, model=None):
+def test(args, model=None, network=None):
     if torch.cuda.is_available() and not args.cuda:
         print("WARNING: You have a CUDA device, so you should probably run with --cuda")
 
@@ -68,15 +68,12 @@ def test(args, model=None):
     dataset_vu = roibatchLoader(roidb_vu, ratio_list_vu, ratio_index_vu, query_vu, 1, imdb_vu._classes, training=False)
 
     # initilize the network here.
+    num_layers = {'res101': 101, 'res50': 50, 'res152': 152}
     if not model:
         if args.net == 'vgg16':
             fasterRCNN = vgg16(imdb_vu.classes, pretrained=False, class_agnostic=args.class_agnostic)
-        elif args.net == 'res101':
-           fasterRCNN = resnet(imdb_vu.classes, 101, pretrained=False, class_agnostic=args.class_agnostic)
-        elif args.net == 'res50':
-            fasterRCNN = resnet(imdb_vu.classes, 50, pretrained=False, class_agnostic=args.class_agnostic)
-        elif args.net == 'res152':
-            fasterRCNN = resnet(imdb_vu.classes, 152, pretrained=False, class_agnostic=args.class_agnostic)
+        elif args.net.startswith('res'):
+            fasterRCNN = resnet(imdb_vu.classes, num_layers[args.net], pretrained=False, class_agnostic=args.class_agnostic)
         else:
             print("network is not defined")
         fasterRCNN.create_architecture()
@@ -91,7 +88,13 @@ def test(args, model=None):
         print('load model successfully!')
     else:
         # evaluate constructed model
-        fasterRCNN = model
+        if network == 'vgg16':
+            fasterRCNN = vgg16(imdb_vu.classes, pretrained=False, class_agnostic=args.class_agnostic)
+        elif network.startswith('res'):
+            fasterRCNN = resnet(imdb_vu.classes, num_layers[args.net], pretrained=False, class_agnostic=args.class_agnostic)
+            
+        fasterRCNN.create_architecture()
+        fasterRCNN.load_state_dict(model)
 
     # initialize the tensor holder here.
     im_data = torch.FloatTensor(1)
