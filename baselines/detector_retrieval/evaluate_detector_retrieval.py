@@ -183,7 +183,7 @@ def evaluate(dataloader, detector, cfg_maskrcnn, retrievalnet, opt, cfg_eval, cf
 
             if cfg_visualization.show_detections:
                 # do not pass class_ids - this is already taken care of
-                visualizer.show_detections(boxes_one_image, image_id, dataloader, cfg_visualization, class_ids=None)
+                visualizer.show_detection_from_dataloader(boxes_one_image, image_id, dataloader, cfg_visualization, class_ids=None)
 
     # normalize by number of steps
     for k in losses:
