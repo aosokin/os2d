@@ -270,7 +270,7 @@ wcwidth==0.2.5
 webencodings==0.5.1
 websocket-client==1.4.2
 websockets==10.4
-Werkzeug==2.2.2
+Werkzeug==2.2.3
 wheel==0.38.4
 widgetsnbextension==4.0.3
 wordcloud==1.8.2.2
