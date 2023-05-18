@@ -56,7 +56,7 @@ ffmpeg-python==0.2.0
 filelock==3.6.0
 Fiona==1.8.22
 flake8==6.0.0
-Flask==2.2.2
+Flask==2.2.5
 flatbuffers==1.12
 fonttools==4.38.0
 gast==0.4.0
