@@ -17,7 +17,7 @@ bleach==5.0.1
 blinker==1.5
 brotlipy==0.7.0
 cachetools==5.2.0
-certifi==2022.9.24
+certifi==2023.7.22
 cffi==1.15.0
 chardet==4.0.0
 charset-normalizer==2.0.12
