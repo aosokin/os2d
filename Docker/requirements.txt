@@ -62,7 +62,7 @@ fonttools==4.38.0
 gast==0.4.0
 geopandas==0.12.1
 gitdb==4.0.10
-GitPython==3.1.35
+GitPython==3.1.41
 glob2==0.7
 google-api-core==2.10.2
 google-auth==2.14.1
