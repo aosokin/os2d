@@ -58,7 +58,7 @@ Fiona==1.8.22
 flake8==6.0.0
 Flask==2.2.5
 flatbuffers==1.12
-fonttools==4.38.0
+fonttools==4.43.0
 gast==0.4.0
 geopandas==0.12.1
 gitdb==4.0.10
