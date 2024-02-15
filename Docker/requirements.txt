@@ -50,7 +50,7 @@ exceptiongroup==1.0.0
 executing==0.8.3
 expecttest==0.1.4
 fairlearn==0.8.0
-fastapi==0.87.0
+fastapi==0.109.1
 fastjsonschema==2.16.2
 ffmpeg-python==0.2.0
 filelock==3.6.0
