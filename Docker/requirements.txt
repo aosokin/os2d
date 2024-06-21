@@ -181,7 +181,7 @@ Pygments==2.11.2
 PyJWT==2.6.0
 pylint==2.15.6
 Pympler==1.0.1
-PyMySQL==1.0.2
+PyMySQL==1.1.1
 pyOpenSSL==22.0.0
 pyparsing==3.0.9
 pyproj==3.4.0
